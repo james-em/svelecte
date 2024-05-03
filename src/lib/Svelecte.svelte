@@ -71,8 +71,7 @@
 </script>
 
 <script>
-  import { createEventDispatcher, onMount, tick } from 'svelte';
-  import { writable } from 'svelte/store';
+  import { onMount, tick } from 'svelte';
   import { flip } from 'svelte/animate';
   import TinyVirtualList from 'svelte-tiny-virtual-list';
   import { positionDropdown, scrollIntoView, virtualListDimensionsResolver } from './utils/dropdown.js';
@@ -80,119 +79,142 @@
   import { iOS, android, highlightSearch } from './utils/helpers.js';
   import { bindItem } from './utils/actions.js';
 
-  /** @type {string} */
-  export let name = 'svelecte';
-  /** @type {string} */
-  export let inputId = '';
-  /** @type {boolean} */
-  export let required = false;
-  /** @type {boolean} */
-  export let disabled = false;
-  /** @type {string} */
-  export let anchor_element = null;
-  /** @type {array} */
-  export let options = [];
-  /** @type {OptionResolverFunction} */
-  export let optionResolver = null;
-  /** @type {string} */
-  export let valueField = defaults.valueField;
-  /** @type {string} */
-  export let labelField = defaults.labelField;
-  /** @type {string} */
-  export let groupLabelField = defaults.groupLabelField;
-  /** @type {string} */
-  export let groupItemsField = defaults.groupItemsField;
-  /** @type {string} */
-  export let disabledField = defaults.disabledField;
-  /** @type {string} */
-  export let placeholder = defaults.placeholder;// UI, UX
-  /** @type {boolean} */
-  export let searchable = defaults.searchable;
-  /** @type {boolean} */
-  export let clearable = defaults.clearable;
-  /** @type {string|RenderFunction}*/
-  export let renderer = null;
-  /** @type {boolean} */
-  export let disableHighlight = false;
-  /** @type {boolean} */
-  export let highlightFirstItem = defaults.highlightFirstItem;
-  /** @type {boolean|'select-navigate'} */
-  export let selectOnTab = defaults.selectOnTab;
-  /** @type {boolean} */
-  export let resetOnBlur = defaults.resetOnBlur;
-  /** @type {boolean} */
-  export let resetOnSelect = defaults.resetOnSelect;
-  /** @type {string|boolean} */
-  export let closeAfterSelect = defaults.closeAfterSelect;
-  /** @type {function} */
-  export let dndzone = () => ({ noop: true, destroy: () => {}});
-  /** @type {array} wrapper array for passing 'svelte-use-form validator action and its params '*/
-  export let validatorAction = [];
-  /** @type {boolean} */
-  export let strictMode = true;
-  // multiple
-  /** @type {boolean} */
-  export let multiple = defaults.multiple;
-  /** @type {number} */
-  export let max = defaults.max;
-  /** @type {'blur'|'always'|null} */
-  export let collapseSelection = defaults.collapseSelection;
-  /** @type {boolean|'auto'} */
-  export let keepSelectionInList = defaults.keepSelectionInList;
-  // creating
-  /** @type {boolean} */
-  export let creatable = defaults.creatable;
-  /** @type {string} */
-  export let creatablePrefix = defaults.creatablePrefix;
-  /** @type {boolean} */
-  export let allowEditing = defaults.allowEditing;
-  /** @type {boolean} */
-  export let keepCreated = defaults.keepCreated;
-  export let delimiter = defaults.delimiter;
-  /** @type {CreateFilterFunction} */
-  export let createFilter = null;
-  /** @type {CreateHandlerFunction} */
-  export let createHandler = null;
-  // remote
-  /** @type {string?} */
-  export let fetch = null;
-  /** @type {object} user-provided optional properties for Request constructor*/
-  export let fetchProps = {};
-  /** @type {'auto'|'init'} */
-  export let fetchMode = 'auto';
-  /** @type {function} */
-  export let fetchCallback = defaults.fetchCallback;
-  /** @type {boolean} */
-  export let fetchResetOnBlur = true;
-  /** @type {number} */
-  export let fetchDebounceTime = defaults.fetchDebounceTime;
-  /** @type {number} */
-  export let minQuery = defaults.minQuery;
-  // performance
-  /** @type {boolean} */
-  export let lazyDropdown = defaults.lazyDropdown;
-  // virtual list
-  export let virtualList = defaults.virtualList;
-  export let vlHeight = defaults.vlHeight;
-  export let vlItemSize = defaults.vlItemSize;
-  // sifter related
-  /** @type {import('./utils/list.js').SearchProps|null} */
-  export let searchProps = null;
-  // styling
-  let className = 'svelecte-control';
-  export { className as class};
-  // i18n override
-  export let i18n = null;
-  // API: public
-  export let readSelection = null;
-  /** @type {array|string|number|object|null} */
-  export let value = null;
-  /** @type {boolean} */
-  export let valueAsObject = defaults.valueAsObject;
-  /** @type {string|number|null|undefined} */
-  export let parentValue = undefined;
+  /**
+   * @typedef Props
+   * @property {string} name
+   * @property {string} inputId
+   * @property {boolean} required
+   * @property {boolean} disabled
+   * @property {string} anchor_element
+   * @property {array} options
+   * @property {OptionResolverFunction} optionResolver
+   * @property {string} valueField
+   * @property {string} labelField
+   * @property {string} groupLabelField
+   * @property {string} groupItemsField
+   * @property {string} disabledField
+   * @property {string} placeholder
+   * @property {boolean} searchable
+   * @property {boolean} clearable
+   * @property {string|RenderFunction} renderer
+   * @property {boolean} disableHighlight
+   * @property {boolean} highlightFirstItem
+   * @property {boolean|'select-navigate'} selectOnTab
+   * @property {boolean} resetOnBlur
+   * @property {boolean} resetOnSelect
+   * @property {string|boolean} closeAfterSelect
+   * @property {function} dndzone
+   * @property {array} validatorAction Wrapper array for passing 'svelte-use-form validator action and its params
+   * @property {boolean} strictMode
+   * @property {boolean} multiple
+   * @property {number} max
+   * @property {'blur'|'always'|null} collapseSelection
+   * @property {boolean|'auto'} keepSelectionInList
+   * @property {boolean} creatable
+   * @property {string} creatablePrefix
+   * @property {boolean} allowEditing
+   * @property {boolean} keepCreated
+   * @property {string} delimiter
+   * @property {CreateFilterFunction} createFilter
+   * @property {CreateHandlerFunction} createHandler
+   * @property {string?} fetchUrl
+   * @property {object} fetchProps User-provided optional properties for Request constructor
+   * @property {'auto'|'init'} fetchMode
+   * @property {function} fetchCallback
+   * @property {boolean} fetchResetOnBlur
+   * @property {number} fetchDebounceTime
+   * @property {number} minQuery
+   * @property {boolean} lazyDropdown
+   * @property {boolean} virtualList
+   * @property {number} vlHeight
+   * @property {number} vlItemSize
+   * @property {import('./utils/list.js').SearchProps|null} searchProps
+   * @property {string} class
+   * @property {object} i18n
+   * @property {any} readSelection
+   * @property {array|string|number|object|null} value
+   * @property {boolean} valueAsObject
+   * @property {string|number|null|undefined} parentValue
+   * @property {function} invalidValue
+   * @property {function} change
+   * @property {function} createOption
+   * @property {function} createFail
+   * @property {function} enterKey
+   * @property {function} focus
+   * @property {function} blur
+   * @property {function} fetch
+   * @property {function} fetchError
+   */
 
-  export function focus() {
+   /** @type {Props} */
+   let {
+    name = 'svelecte',
+    inputId = '',
+    required = false,
+    disabled = false,
+    anchor_element = null,
+    options = [],
+    optionResolver = null,
+    valueField = defaults.valueField,
+    labelField = defaults.labelField,
+    groupLabelField = defaults.groupLabelField,
+    groupItemsField = defaults.groupItemsField,
+    disabledField = defaults.disabledField,
+    placeholder = defaults.placeholder,
+    searchable = defaults.searchable,
+    clearable = defaults.clearable,
+    renderer = null,
+    disableHighlight = false,
+    highlightFirstItem = defaults.highlightFirstItem,
+    selectOnTab = defaults.selectOnTab,
+    resetOnBlur = defaults.resetOnBlur,
+    resetOnSelect = defaults.resetOnSelect,
+    closeAfterSelect = defaults.closeAfterSelect,
+    dndzone = () => ({ noop: true, destroy: () => { } }),
+    validatorAction = [],
+    strictMode = true,
+    multiple = defaults.multiple,
+    max = defaults.max,
+    collapseSelection = defaults.collapseSelection,
+    keepSelectionInList = defaults.keepSelectionInList,
+    creatable = defaults.creatable,
+    creatablePrefix = defaults.creatablePrefix,
+    allowEditing = defaults.allowEditing,
+    keepCreated = defaults.keepCreated,
+    delimiter = defaults.delimiter,
+    createFilter = null,
+    createHandler = null,
+    fetchUrl = null,
+    fetchProps = {},
+    fetchMode = 'auto',
+    fetchCallback = defaults.fetchCallback,
+    fetchResetOnBlur = true,
+    fetchDebounceTime = defaults.fetchDebounceTime,
+    minQuery = defaults.minQuery,
+    lazyDropdown = defaults.lazyDropdown,
+    virtualList = defaults.virtualList,
+    vlHeight = defaults.vlHeight,
+    vlItemSize = defaults.vlItemSize,
+    searchProps = null,
+    class: className = 'svelecte-control',
+    i18n = null,
+    readSelection = null,
+    value = null,
+    valueAsObject = defaults.valueAsObject,
+    parentValue = undefined,
+    invalidValue = undefined,
+    change = undefined,
+    createOption = undefined,
+    createFail = undefined,
+    enterKey = undefined,
+    focus = undefined,
+    blur = undefined,
+    fetch = undefined,
+    fetchError = undefined
+  } = $props();
+
+
+  export function focusElement() {
     ref_input.focus();
   }
   // required for custom element
@@ -209,7 +231,7 @@
    * @param {string|number|array} value
    */
   export function refetchWith(value) {
-    if (!fetch) return;
+    if (!fetchUrl) return;
     fetch_runner({
       init: true,
       initValue: value,
@@ -218,12 +240,11 @@
     fetchResetOnBlur = false; // force this to preven 'clearSelection' clear fetched options
   }
 
-  const dispatch = createEventDispatcher();
   const DOM_ID = `sv-${name}-select`;
 
   /** ************************************ preparation */
   /* possibility to provide initial (selected) values in `fetch` mode **/
-  if (fetch && value && valueAsObject && (!options || (options && options.length === 0))) {
+  if (fetchUrl && value && valueAsObject && (!options || (options && options.length === 0))) {
     options = Array.isArray(value) ? value : [value];
   }
   if (!inputId) inputId = `${DOM_ID}-input`;
@@ -268,10 +289,10 @@
   // utils
   /** @type {import('./settings.js').I18nObject} */
   let i18n_actual;
-  let fetch_initOnly = fetchMode === 'init' || (fetch && fetch.includes('[query]') === false);
+  let fetch_initOnly = fetchMode === 'init' || (fetchUrl && fetchUrl.includes('[query]') === false);
   let fetch_initValue = fetch_initOnly
     ? value
-    : (fetch && options.length === 0 ? value : null);
+    : (fetchUrl && options.length === 0 ? value : null);
   let isIOS = null;
   let isAndroid = null;
   let doCollapse = collapseSelection !== null;
@@ -484,7 +505,7 @@
         console.warn('[Svelecte]: provided "value" property is invalid', passedVal);
         value = multiple ? [] : null;
         readSelection = value;
-        dispatch('invalidValue', passedVal);
+        invalidValue?.(passedVal)
         return;
       }
       readSelection = Array.isArray(passedVal) ? _selection : _selection.shift();
@@ -600,7 +621,7 @@
    */
   function watch_listMessage(maxReached, options_filtered) {
     // fetch-related states are handled manually
-    if (fetch && !fetch_initOnly) return;
+    if (fetchUrl && !fetch_initOnly) return;
 
     if (maxReached) {
       listMessage = i18n_actual.max(max);
@@ -627,7 +648,7 @@
    */
    function emitChangeEvent() {
     tick().then(() => {
-      dispatch('change', readSelection);
+      change?.(readSelection)
       if (ref_select_element) {
         ref_select_element.dispatchEvent(new Event('input'));   // required for svelte-use-form
         ref_select_element.dispatchEvent(new Event('change'));  // typically you expect change event to be fired
@@ -639,7 +660,7 @@
    * Dispatch createoption event when user creates a new entry (with 'creatable' feature)
    */
   function emitCreateEvent(createdOpt) {
-      dispatch('createoption', createdOpt)
+      createOption?.(createdOpt)
   }
   // #endregion
 
@@ -669,7 +690,7 @@
       }))
         .then(newObj => {
           isCreating = false;
-          !fetch && alreadyCreated.push(opt);
+          !fetchUrl && alreadyCreated.push(opt);
           newObj.$created = true;  // internal setter
           if (keepCreated) prev_options = [...prev_options, newObj];
           emitCreateEvent(newObj);
@@ -678,7 +699,7 @@
           emitChangeEvent();
         })
         .catch(e => {
-          dispatch('createFail', {
+          createFail?.({
             input: opt,
             error: e
           });
@@ -786,7 +807,7 @@
       return;
     }
 
-    options_flat = fetch && !fetch_initOnly && fetchResetOnBlur
+    options_flat = fetchUrl && !fetch_initOnly && fetchResetOnBlur
       ? []
       :options_flat;
   }
@@ -807,7 +828,7 @@
       prev_options = optionResolver(options, selectedKeys);
       return;
     }
-    options_flat = fetch && !fetch_initOnly && fetchResetOnBlur
+    options_flat = fetchUrl && !fetch_initOnly && fetchResetOnBlur
       ? []
       :options_flat;
   }
@@ -891,7 +912,7 @@
       case Tab:
       case 'Enter':
         if (!is_dropdown_opened) {
-          event.key !== Tab && dispatch('enterKey', event); // ref #125
+          event.key !== Tab && enterKey?.(event); // ref #125
           return;
         }
         let activeDropdownItem = !ctrlKey ? options_filtered[dropdown_index] : null;
@@ -907,13 +928,13 @@
         }
         if (!activeDropdownItem && selectedOptions.length) {
           is_dropdown_opened = false;
-          event.key !== Tab && dispatch('enterKey', event); // ref #125
+          event.key !== Tab && enterKey?.(event); // ref #125
           return;
         }
         (event.key !== Tab || (event.key === Tab && selectOnTab !== 'select-navigate')) && event.preventDefault(); // prevent form submit
         break;
       case ' ':
-        if (!fetch && !is_dropdown_opened) {
+        if (!fetchUrl && !is_dropdown_opened) {
           is_dropdown_opened = true;
           event.preventDefault();
         }
@@ -1024,7 +1045,7 @@
     collapseSelection === 'blur' && !is_dragging && setTimeout(() => {
       doCollapse = false;
     }, 100);
-    dispatch('focus', ref_input);
+    focus?.(ref_input);
   }
 
   function onBlur() {
@@ -1039,7 +1060,7 @@
     collapseSelection === 'blur' && !is_dragging && setTimeout(() => {
       doCollapse = true;
     }, 100);
-    dispatch('blur', ref_input);
+    blur?.(ref_input);
   }
 
   /**
@@ -1084,9 +1105,9 @@
   let debouncedFetch;
 
   $: trigger_fetch(input_value);
-  $: is_mounted && watch_fetch_init(fetch, parentValue);
+  $: is_mounted && watch_fetch_init(fetchUrl, parentValue);
 
-  let listMessage = fetch
+  let listMessage = fetchUrl
     ? (fetch_initOnly
       ? i18n_actual.fetchInit
       : (minQuery > 1
@@ -1184,7 +1205,7 @@
     const initial = fetch_initValue || opts.initValue;
     if (fetch_initOnly) listMessage = i18n_actual.fetchInit;
 
-    const built = defaults.requestFactory(input_value, { parentValue, url: fetch, initial }, fetchProps);
+    const built = defaults.requestFactory(input_value, { parentValue, url: fetchUrl, initial }, fetchProps);
     fetch_controller = built.controller;
     fetch_reset(built.controller);
     window.fetch(built.request)
@@ -1192,7 +1213,7 @@
       // success
       .then((/** @type {object} */ json) => {
         // sveltekit returns error property
-        if (!Array.isArray(json) && json?.error) dispatch('fetchError', json.error);
+        if (!Array.isArray(json) && json?.error) fetchError?.(json.error);
         return Promise.resolve(fetchCallback
           ? fetchCallback(json)
           : (json.data || json.items || json.options || json)
@@ -1203,7 +1224,7 @@
               data = [];
             }
             prev_options = data;
-            dispatch('fetch', data);
+            fetch?.(data);
 
             tick().then(() => {
               if (initial) {
@@ -1218,7 +1239,7 @@
       .catch(e => {
         if (e instanceof DOMException && e.name === 'AbortError') return true;
         prev_options = [];
-        dispatch('fetchError', e);
+        fetchError?.(e);
         console.warn('[Svelecte] Fetch Error:', e);
       })
       // teardown
