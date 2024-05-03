@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event'
 import Svelecte from '$lib/Svelecte.svelte';
+import { mount } from 'svelte';
 
 function sleep(ms) {
   return new Promise(resolve => {
@@ -27,14 +28,12 @@ describe('.is-single', () => {
 
 describe('.is-valid', () => {
   it('required', () => {
-    const rr = render(Svelecte, {
-      required: true
-    });
-    
+    const rr = render(Svelecte, { required: true });
+
     expect(rr.container.querySelector('.is-required')).toBeInTheDocument();
     expect(rr.container.querySelector('.is-valid')).toBeNull();
     
-    rr.component.$$set({ multiple: true });
+    rr.rerender({ multiple: false });
     expect(rr.container.querySelector('.is-required')).toBeInTheDocument();
     expect(rr.container.querySelector('.is-valid')).toBeNull();
   });
@@ -45,7 +44,7 @@ describe('.is-valid', () => {
     expect(rr.container.querySelector('.is-required')).toBeNull();
     expect(rr.container.querySelector('.is-valid')).toBeInTheDocument();
     
-    rr.component.$$set({ multiple: true });
+    rr.rerender({ multiple: false });
     expect(rr.container.querySelector('.is-required')).toBeNull();
     expect(rr.container.querySelector('.is-valid')).toBeInTheDocument();
   });
@@ -103,7 +102,7 @@ describe('.is-disabled', () => {
     expect(rr.container.querySelector('.is-disabled')).toBeNull();
     input.blur();
 
-    rr.component.$$set({ disabled: true });
+    rr.rerender({ disabled: true });
 
     await sleep(0); // required to wait for the test
 
