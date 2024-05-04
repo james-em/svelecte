@@ -199,7 +199,7 @@
     class: className = 'svelecte-control',
     i18n = null,
     readSelection = null,
-    value = null,
+    value = $bindable(null),
     valueAsObject = defaults.valueAsObject,
     parentValue = undefined,
     invalidValue = undefined,
@@ -251,16 +251,16 @@
   multiple = name && !multiple ? name.endsWith('[]') : multiple;
   /** ************************************ END preparation */
 
-  let is_mounted = false;
+  let is_mounted = $state(false);
   // state-related
   let prev_value;
   let prev_options = optionResolver
     ? optionResolver(options, new Set())
     : ensureObjectArray(options, valueField, labelField);
   let prev_parent_value = undefined;
-  let currentValueField = valueField || fieldInit('value', prev_options, groupItemsField);
-  let currentLabelField = labelField || fieldInit('label', prev_options, groupItemsField);
-  let selectedOptions = value !== null ? initSelection(prev_options, value, valueAsObject, groupItemsField, currentValueField) : [];
+  let currentValueField = $state(valueField || fieldInit('value', prev_options, groupItemsField));
+  let currentLabelField = $state(labelField || fieldInit('label', prev_options, groupItemsField));
+  let selectedOptions = $state(value !== null ? initSelection(prev_options, value, valueAsObject, groupItemsField, currentValueField) : []);
   /** @type {Set<string|number>} */
   const selectedKeys = selectedOptions.reduce((/** @type {Set} */ set,/** @type {object} */ opt) => {
     set.add(opt[currentValueField]);
@@ -268,111 +268,122 @@
   }, new Set());
   let alreadyCreated = selectedOptions.filter(opt => opt.$created);
   // logic-related
-  let is_focused = false;
+  let is_focused = $state(false);
   let focus_by_mouse = false;
-  let is_tainted = false; // true after first focus
-  let is_dropdown_opened = false;
-  let dropdown_show = false;
-  let dropdown_index = highlightFirstItem ? 0 : null;
+  let is_tainted = $state(false); // true after first focus
+  let is_dropdown_opened = $state(false);
+  let dropdown_show = $state(false);
+  let dropdown_index = $state(highlightFirstItem ? 0 : null);
   // dropdown-related
-  let render_dropdown = !lazyDropdown;
+  let render_dropdown = $state(!lazyDropdown);
   let dropdown_scroller = null;
   let virtuallist_automode = virtualList && vlHeight === null && vlItemSize === null;
   let vl_height = vlHeight;
-  let vl_itemSize = vlItemSize;
-  let meta_key;
+  let vl_itemSize = $state(vlItemSize);
+  let meta_key = $state();
   let hasEmptyList = false;
   // input-related
   /** @type {string} */
-  let input_value = '';
+  let input_value = $state('');
   let disable_key_event_bubble = false;
   // utils
   /** @type {import('./settings.js').I18nObject} */
-  let i18n_actual;
+  let i18n_actual = $state();
   let fetch_initOnly = fetchMode === 'init' || (fetchUrl && fetchUrl.includes('[query]') === false);
   let fetch_initValue = fetch_initOnly
     ? value
     : (fetchUrl && options.length === 0 ? value : null);
   let isIOS = null;
   let isAndroid = null;
-  let doCollapse = collapseSelection !== null;
-  let isFetchingData = false;
-  let isCreating = false;
-  let flipDurationMs = 100;
+  let doCollapse = $state(collapseSelection !== null);
+  let isFetchingData = $state(false);
+  let isCreating = $state(false);
+  let flipDurationMs = $state(100);
   let is_dragging = false;
   let is_fetch_dependent = false;
   // refs
   let /** @type {HTMLInputElement}  */  ref_input;
-  let /** @type {HTMLSelectElement} */  ref_select_element;
-  let /** @type {HTMLDivElement}    */  ref_container;
-  let /** @type {HTMLDivElement}    */  ref_container_scroll;
-  let /** svelte-tiny-virtual-list  */  ref_virtuallist;
+  let /** @type {HTMLSelectElement} */  ref_select_element = $state();
+  let /** @type {HTMLDivElement}    */  ref_container = $state();
+  let /** @type {HTMLDivElement}    */  ref_container_scroll = $state();
+  let /** svelte-tiny-virtual-list  */  ref_virtuallist = $state();
 
   const itemConfig = createConfig(currentValueField, currentLabelField, groupLabelField, groupItemsField);
   watch_i18n(i18n, true); // ensure it is available immediately
 
   // #region [reactivity]
-  $: watch_item_props(valueField, labelField);
-  $: maxReached = max !== 0 && selectedOptions.length == max;     // == is intentional, if string is provided
-  $: watch_options(options);
-  $: options_flat = flatList(prev_options, itemConfig);
-  $: watch_value_change(value);
-  $: options_filtered = maxReached
-    ? []
-    : filterList(
-      options_flat,
-      input_value,
-      resolveExcludedValue(input_value),
-      itemConfig,
-      searchProps || {}
-    );
-  // only initial setter
-  $: highlightFirstItem && setDropdownIndex(0, { asc: true });
-  $: options_filtered.length <= dropdown_index && setDropdownIndex(0, { asc: !creatable, desc: creatable });
-
-  $: if (!createFilter) createFilter = inputVal => alreadyCreated.includes(inputVal);
-  $: if (!createHandler) createHandler = ({ inputValue, labelField, valueField, prefix }) => ({
-    [valueField]: inputValue,
-    [labelField]: `${prefix}${inputValue}`
+  $effect(() => watch_item_props(valueField, labelField));
+  let maxReached = $derived(max !== 0 && selectedOptions.length == max) // == is intentional, if string is provided
+  $effect(() => watch_options(options));
+  let options_flat = $state([]);
+  $effect(() => {
+    options_flat = flatList(prev_options, itemConfig);
   });
 
+  $effect(() => watch_value_change(value));
+
+
+  let options_filtered = $state([]);
+
+  $effect(() => {
+    options_filtered = maxReached
+      ? []
+      : filterList(
+          options_flat,
+          input_value,
+          resolveExcludedValue(input_value),
+          itemConfig,
+          searchProps || {}
+      )
+  });
+
+  // only initial setter
+  $effect(() => highlightFirstItem && setDropdownIndex(0, { asc: true }));
+  $effect(() => options_filtered.length <= dropdown_index && setDropdownIndex(0, { asc: !creatable, desc: creatable }));
+
+  $effect(() => { if (!createFilter) createFilter = inputVal => alreadyCreated.includes(inputVal) });
+  $effect(() => { if (!createHandler) createHandler = ({ inputValue, labelField, valueField, prefix }) => ({
+    [valueField]: inputValue,
+    [labelField]: `${prefix}${inputValue}`
+  })});
+
   // watch functions
-  $: watch_i18n(i18n);
-  $: watch_parentValue(parentValue);
-  $: watch_selectedOptions(selectedOptions);
+  $effect(() => watch_i18n(i18n));
+  $effect(() => watch_parentValue(parentValue));
+  $effect(() => watch_selectedOptions(selectedOptions));
 
   /**
    * @type {RenderFunction}
    */
-  $: itemRenderer = typeof renderer === 'function'
+  let itemRenderer = $derived.by(() => typeof renderer === 'function'
     ? renderer
-    : (stringFormatters[renderer] || stringFormatters.default.bind({ label: currentLabelField}));
+    : (stringFormatters[renderer] || stringFormatters.default.bind({ label: currentLabelField})));
 
   /** ************************************ dropdown-specific */
 
-  $: vl_listHeight = Math.min(vl_height, Array.isArray(vl_itemSize)
+  let vl_listHeight = $derived.by(() => Math.min(vl_height, Array.isArray(vl_itemSize)
     ? vl_itemSize.reduce((res, num) => {
       res+= num;
       return res;
     }, 0)
     : options_filtered.length * vl_itemSize
-  );
-  $: virtuallist_automode && watch_options_virtualList(options_filtered);
+  ));
+  $effect(() => virtuallist_automode && watch_options_virtualList(options_filtered));
 
-  $: watch_is_dropdown_opened(is_dropdown_opened);
+  $effect(() => watch_is_dropdown_opened(is_dropdown_opened));
 
   /** ************************************ input-specific */
 
   /** @type {'text'|'none'}*/
-  $: input_mode = searchable ? 'text' : 'none';
+  let input_mode = $derived(searchable ? 'text' : 'none');
   /** @type {string} */
-  $: placeholder_active = selectedOptions.length ? '' : placeholder;
+  let placeholder_active = $derived(selectedOptions.length ? '' : placeholder);
   /** @type {'enter'} */
-  $: enter_hint = selectedOptions.length > 0 && multiple === false ? null : 'enter';
+  let enter_hint = $derived(selectedOptions.length > 0 && multiple === false ? null : 'enter');
 
   // aria related
-  $: aria_selection = i18n_actual.aria_selected(selectedOptions.map(o => o[currentLabelField]));
-  $: aria_context = options_filtered.length && dropdown_index > 0
+  let aria_selection = $derived(i18n_actual.aria_selected(selectedOptions.map(o => o[currentLabelField])));
+  let aria_context = $derived.by(() => options_filtered.length && dropdown_index > 0
     ? (
       is_dropdown_opened
         ? i18n_actual.aria_listActive(options_filtered[dropdown_index], currentLabelField, options_filtered.length)
@@ -381,7 +392,7 @@
     : (input_value.length
       ? i18n_actual.nomatch
       : i18n_actual.empty
-    );
+    ));
 
 
   // #endregion
@@ -404,9 +415,6 @@
     }
     if (labelProp) {
       itemConfig.labelField = currentLabelField = labelProp;
-      if (renderer === null || renderer === 'default') {
-        itemRenderer = stringFormatters.default.bind({ label: currentLabelField });
-      }
     }
   }
 
@@ -436,9 +444,6 @@
         if (!labelField && currentLabelField !== ilabel) {
           itemConfig.labelField = ilabel;
           currentLabelField = ilabel;
-          if (renderer === null || renderer === 'default') {
-            itemRenderer = stringFormatters.default.bind({ label: currentLabelField });
-          }
         };
       }
     }
@@ -751,7 +756,6 @@
       return true;
     }
 
-    options_flat = options_flat;
     return true;
   }
 
@@ -800,16 +804,14 @@
     const id = opt[currentValueField];
     selectedKeys.delete(id);
     selectedOptions.splice(selectedOptions.findIndex(o => o[currentValueField] == id), 1);
-    selectedOptions = selectedOptions;
 
     if (optionResolver) {
       prev_options = optionResolver(options, selectedKeys);
       return;
     }
-
     options_flat = fetchUrl && !fetch_initOnly && fetchResetOnBlur
-      ? []
-      :options_flat;
+        ? []
+        : options_flat;
   }
 
   function clearSelection() {
@@ -821,7 +823,7 @@
       return [];
     }, []);
     if (!keepCreated) alreadyCreated = [];  // ref #198
-    maxReached = false;       // reset forcefully, related to #145
+
     if (input_value) input_value = '';
 
     if (optionResolver) {
@@ -829,8 +831,8 @@
       return;
     }
     options_flat = fetchUrl && !fetch_initOnly && fetchResetOnBlur
-      ? []
-      :options_flat;
+        ? []
+        : options_flat;
   }
 
   function onCreate(_event) {
@@ -1104,8 +1106,8 @@
   /** @type {function|null} */
   let debouncedFetch;
 
-  $: trigger_fetch(input_value);
-  $: is_mounted && watch_fetch_init(fetchUrl, parentValue);
+  $effect(() => trigger_fetch(input_value));
+  $effect(() => is_mounted && watch_fetch_init(fetchUrl, parentValue));
 
   let listMessage = fetchUrl
     ? (fetch_initOnly
@@ -1119,7 +1121,7 @@
       ? i18n_actual.emptyCreatable
       : i18n_actual.empty
     );
-  $: watch_listMessage(maxReached, options_filtered);
+  $effect(() => watch_listMessage(maxReached, options_filtered));
 
   /**
    *
@@ -1143,16 +1145,17 @@
   /**
    * Holder for AbortController implemented as store because of reactivity delays
    *
-   * @type {import('svelte/store').Writable<{control:AbortController}>}
+   * @type {{control:AbortController}}
    */
-  let fetch_store = writable({control: null});
+  let fetch_store = $state({control: null});
   /**
    * @param {AbortController?} control
    */
-  const fetch_reset = (control = null) => fetch_store.update(val => {
-    val.control?.abort();
-    return { control };
-  })
+  const fetch_reset = (control = null) => {
+    fetch_store.control?.abort();
+    fetch_store.control = control;
+  }
+
 
   /**
    * User only for QUERY mode
