@@ -71,7 +71,7 @@
 </script>
 
 <script>
-  import { onMount, tick } from 'svelte';
+  import { onMount, tick, untrack } from 'svelte';
   import { flip } from 'svelte/animate';
   import TinyVirtualList from 'svelte-tiny-virtual-list';
   import { positionDropdown, scrollIntoView, virtualListDimensionsResolver } from './utils/dropdown.js';
@@ -422,36 +422,38 @@
    * @param {array} opts
    */
   function watch_options(opts) {
-    if (!is_mounted) return;
-
-    if (prev_options !== opts) {
-      // make sure, it's an array
-      opts = ensureObjectArray(opts, currentValueField, currentLabelField);
-
-      // do these automatic re-adjustments only when props are not specified
-      if (!valueField) {
-        const ivalue = fieldInit('value', opts || null, groupItemsField);
-        if (!valueField && currentValueField !== ivalue) {
-          itemConfig.valueField = currentValueField = ivalue;
-          /**
-           * NOTE: selection is RESET when non-matching is detected (selection would be messed up anyway)
-           */
-          selectedKeys.size > 0 && clearSelection();
+    untrack(() => {
+      if (!is_mounted) return;
+  
+      if (prev_options !== opts) {
+        // make sure, it's an array
+        opts = ensureObjectArray(opts, currentValueField, currentLabelField);
+  
+        // do these automatic re-adjustments only when props are not specified
+        if (!valueField) {
+          const ivalue = fieldInit('value', opts || null, groupItemsField);
+          if (!valueField && currentValueField !== ivalue) {
+            itemConfig.valueField = currentValueField = ivalue;
+            /**
+             * NOTE: selection is RESET when non-matching is detected (selection would be messed up anyway)
+             */
+            selectedKeys.size > 0 && clearSelection();
+          }
+        }
+        if (!labelField) {
+          const ilabel = fieldInit('label', opts || null, groupItemsField);
+          if (!labelField && currentLabelField !== ilabel) {
+            itemConfig.labelField = ilabel;
+            currentLabelField = ilabel;
+          };
         }
       }
-      if (!labelField) {
-        const ilabel = fieldInit('label', opts || null, groupItemsField);
-        if (!labelField && currentLabelField !== ilabel) {
-          itemConfig.labelField = ilabel;
-          currentLabelField = ilabel;
-        };
-      }
-    }
-    options = opts;
-    // continue to update options_flat
-    prev_options = optionResolver
-      ? optionResolver(opts, selectedKeys)
-      : opts;
+      options = opts;
+      // continue to update options_flat
+      prev_options = optionResolver
+        ? optionResolver(opts, selectedKeys)
+        : opts;
+    });
   }
 
   /**
